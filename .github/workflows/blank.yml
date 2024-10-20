@@ -1,0 +1,35 @@
+name: build
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+
+jobs:
+  build:
+    name: Build and upload packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get install rpm
+      - name: Create packages
+        run: |
+          mkdir build && cd build
+          cmake ..
+          cpack
+      - name: Create release and upload assets
+        run: |
+          set -x
+          assets=()
+          for asset in ./build/*.deb ./build/*.rpm ; do
+            assets+=("-a" "$asset")
+          done
+          tag_name="${GITHUB_REF##*/}"
+          hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
